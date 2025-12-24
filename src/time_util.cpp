@@ -11,10 +11,11 @@ const char *password = "";
 const char *time_zone = "IST-5:30";
 int currentDay;
 
-void (*alarmCallbackToChangeCircuit)(int, int);
+void (*TimeUtil::alarmCallbackToChangeCircuit)(int, int) = nullptr;
 
-TimeUtil::TimeUtil(void (*func)(int, int)) : alarmCallbackToChangeCircuit(func)
+TimeUtil::TimeUtil(void (*func)(int, int))
 {
+    alarmCallbackToChangeCircuit = func;
 }
 
 void TimeUtil::connectToWiFi()
@@ -47,17 +48,17 @@ void TimeUtil::synchronizeTime()
 }
 void dayAlarmCallback()
 {
-    alarmCallbackToChangeCircuit(0, currentDay);
+    TimeUtil::alarmCallbackToChangeCircuit(0, currentDay);
 }
 
 void noonAlarmCallback()
 {
-    alarmCallbackToChangeCircuit(1, currentDay);
+    TimeUtil::alarmCallbackToChangeCircuit(1, currentDay);
 }
 
 void nightAlarmCallback()
 {
-    alarmCallbackToChangeCircuit(2, currentDay);
+    TimeUtil::alarmCallbackToChangeCircuit(2, currentDay);
 }
 
 void TimeUtil::setDayAlarm(int hour, int minute)

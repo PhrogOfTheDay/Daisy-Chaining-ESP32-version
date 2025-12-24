@@ -28,10 +28,11 @@ void turnOnOrOffLED(int led_no)
   delay(4000);
 }
 
-void activateReminder(int day, int time_of_day)
+void activateReminder(int time_of_day, int day)
 {
   turnOnOrOffLED(day * 3 + time_of_day);
   Serial.println("Reminder Activated!");
+  Serial.println("Day: " + String(day) + ", Time of Day: " + String(time_of_day));
 }
 
 TimeUtil timeUtil(activateReminder);
@@ -72,7 +73,7 @@ void setup()
   Serial.begin(115200);
   shift.begin(PL, CE, DATA, CLK_CP);
   timeUtil.configureSetup();
-  timeUtil.setDayAlarm(9, 41);
+  timeUtil.setDayAlarm(12, 51);
 }
 
 void displayValues()

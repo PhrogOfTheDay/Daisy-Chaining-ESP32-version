@@ -6,9 +6,9 @@
 class TimeUtil
 {
 private:
-    void (*alarmCallbackToChangeCircuit)(int, int);
-
 public:
+    static void (*alarmCallbackToChangeCircuit)(int, int);
+
     TimeUtil(void (*func)(int, int));
     void connectToWiFi();
     void synchronizeTime();
