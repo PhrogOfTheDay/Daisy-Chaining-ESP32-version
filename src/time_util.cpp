@@ -113,7 +113,8 @@ void setCurrentDay()
     // getLocalTime returns true if all data/time info was successfully loaded into timeInfo
     if (getLocalTime(&timeInfo))
     {
-        currentDay = timeInfo.tm_wday; // gets day of the week between 0-6 for each since sunday
+        int todaysDay = timeInfo.tm_wday == 0 ? 6 : timeInfo.tm_wday - 1;
+        currentDay = todaysDay; // gets day of the week between 0-6 for each since sunday
     }
 }
 

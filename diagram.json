@@ -335,6 +335,159 @@
         "matrixBrightness": "5",
         "pixelate": "1"
       }
+    },
+    {
+      "type": "wokwi-text",
+      "id": "text21",
+      "top": -259.2,
+      "left": -1161.6,
+      "attrs": {
+        "text": "Monday \n"
+      }
+    },
+    {
+      "type": "wokwi-text",
+      "id": "text22",
+      "top": -230.4,
+      "left": -1152,
+      "attrs": {
+        "text": "M\n\n"
+      }
+    },
+    {
+      "type": "wokwi-text",
+      "id": "text23",
+      "top": -230.4,
+      "left": -1132.8,
+      "attrs": {
+        "text": "N\n\n\n"
+      }
+    },
+    {
+      "type": "wokwi-text",
+      "id": "text24",
+      "top": -230.4,
+      "left": -1113.6,
+      "attrs": {
+        "text": "E\n\n"
+      }
+    },
+    {
+      "type": "wokwi-text",
+      "id": "text25",
+      "top": -259.2,
+      "left": -1094.4,
+      "attrs": {
+        "text": "Tuesday\n\n"
+      }
+    },
+    {
+      "type": "wokwi-text",
+      "id": "text26",
+      "top": -230.4,
+      "left": -1084.8,
+      "attrs": {
+        "text": "M\n\n"
+      }
+    },
+    {
+      "type": "wokwi-text",
+      "id": "text27",
+      "top": -230.4,
+      "left": -1065.6,
+      "attrs": {
+        "text": "N\n"
+      }
+    },
+    {
+      "type": "wokwi-text",
+      "id": "text28",
+      "top": -230.4,
+      "left": -1046.4,
+      "attrs": {
+        "text": "E\n"
+      }
+    },
+    {
+      "type": "wokwi-text",
+      "id": "text29",
+      "top": -259.2,
+      "left": -1008,
+      "attrs": {
+        "text": "Wed\n"
+      }
+    },
+    {
+      "type": "wokwi-text",
+      "id": "text30",
+      "top": -230.4,
+      "left": -1017.6,
+      "attrs": {
+        "text": "M\n\n"
+      }
+    },
+    {
+      "type": "wokwi-text",
+      "id": "text31",
+      "top": -230.4,
+      "left": -988.8,
+      "attrs": {
+        "text": "N\n\n\n"
+      }
+    },
+    {
+      "type": "wokwi-text",
+      "id": "text32",
+      "top": -230.4,
+      "left": -969.6,
+      "attrs": {
+        "text": "E\n\n"
+      }
+    },
+    {
+      "type": "wokwi-buzzer",
+      "id": "bz1",
+      "top": 367.2,
+      "left": -939,
+      "attrs": {
+        "volume": "0.1"
+      }
+    },
+    {
+      "type": "wokwi-text",
+      "id": "text33",
+      "top": -259.2,
+      "left": -940.8,
+      "attrs": {
+        "text": "Thursday\n"
+      }
+    },
+    {
+      "type": "wokwi-text",
+      "id": "text34",
+      "top": -230.4,
+      "left": -940.8,
+      "attrs": {
+        "text": "M\n\n"
+      }
+    },
+    {
+      "type": "wokwi-text",
+      "id": "text35",
+      "top": -230.4,
+      "left": -912,
+      "attrs": {
+        "text": "N\n\n\n"
+      }
+    },
+    {
+      "type": "wokwi-text",
+      "id": "text36",
+      "top": -230.4,
+      "left": -883.2,
+      "attrs": {
+        "text": "E\n\n"
+      }
     }
   ],
   "connections": [
@@ -876,6 +1029,51 @@
       ]
     ],
     [
+      "neopixels1:DIN",
+      "esp:15",
+      "green",
+      [
+        "v19.2",
+        "h292.2",
+        "v364.8"
+      ]
+    ],
+    [
+      "neopixels1:VDD",
+      "esp:5V",
+      "red",
+      [
+        "v0"
+      ]
+    ],
+    [
+      "esp:GND.1",
+      "neopixels1:VSS",
+      "black",
+      [
+        "v9.45",
+        "h-211.2"
+      ]
+    ],
+    [
+      "esp:GND.3",
+      "bz1:1",
+      "black",
+      [
+        "v288",
+        "h-115.2"
+      ]
+    ],
+    [
+      "bz1:2",
+      "esp:4",
+      "green",
+      [
+        "v0",
+        "h210.8"
+      ]
+    ],
+    [
       "sw1:1",
       "bb1:33b.g",
       "",
@@ -1257,33 +1455,6 @@
       "",
       [
         "$bb"
-      ]
-    ],
-    [
-      "neopixels1:DIN",
-      "esp:15",
-      "green",
-      [
-        "v19.2",
-        "h292.2",
-        "v364.8"
-      ]
-    ],
-    [
-      "neopixels1:VDD",
-      "esp:5V",
-      "red",
-      [
-        "v0"
-      ]
-    ],
-    [
-      "esp:GND.1",
-      "neopixels1:VSS",
-      "black",
-      [
-        "v9.45",
-        "h-211.2"
       ]
     ]
   ],

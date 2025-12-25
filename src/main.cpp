@@ -8,6 +8,7 @@
 
 int const LED_PIN = 15;
 int const LED_COUNT = 21;
+int const buzzer = 4;
 Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
 
 int PL = 18;
@@ -31,8 +32,11 @@ void turnOnOrOffLED(int led_no)
 void activateReminder(int time_of_day, int day)
 {
   turnOnOrOffLED(day * 3 + time_of_day);
-  Serial.println("Reminder Activated!");
+  tone(buzzer, 31);
+  delay(2000);
+  Serial.println(day * 3 + time_of_day);
   Serial.println("Day: " + String(day) + ", Time of Day: " + String(time_of_day));
+  noTone(buzzer);
 }
 
 TimeUtil timeUtil(activateReminder);
@@ -71,9 +75,11 @@ void activateReminder2()
 void setup()
 {
   Serial.begin(115200);
+  pinMode(buzzer, OUTPUT);
   shift.begin(PL, CE, DATA, CLK_CP);
   timeUtil.configureSetup();
-  timeUtil.setDayAlarm(12, 51);
+  timeUtil.setDayAlarm(16, 46);
+  timeUtil.setNightAlarm(22, 27);
 }
 
 void displayValues()
