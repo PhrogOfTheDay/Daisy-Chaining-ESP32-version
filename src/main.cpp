@@ -21,10 +21,17 @@ const int numBits = numOfRegisters * 8;
 Neza74HC165<numOfRegisters> shiftRegs;
 ShiftIn<numOfRegisters> shift;
 
-void turnOnOrOffLED(int led_no)
+void turnOnOrOffLED(int led_no, bool on = true)
 {
   strip.clear();
-  strip.setPixelColor(led_no, 255, 0, 0);
+  if (on)
+  {
+    strip.setPixelColor(led_no, 255, 0, 0);
+  }
+  else
+  {
+    strip.setPixelColor(led_no, 0, 0, 0);
+  }
   strip.show();
   delay(4000);
 }
@@ -57,7 +64,7 @@ std::vector<int> getCurrentStates()
     if (bitVal == 1)
     {
       states.push_back(i);
-      turnOnOrOffLED(i);
+      turnOnOrOffLED(i, false);
       Serial.println("Day: " + day_of_the_week[i / 3]);
       Serial.println("Time: " + times_of_the_day[i % 3]);
     }
@@ -67,19 +74,13 @@ std::vector<int> getCurrentStates()
   return states;
 }
 
-void activateReminder2()
-{
-  Serial.println("Reminder Activated!");
-}
-
 void setup()
 {
   Serial.begin(115200);
   pinMode(buzzer, OUTPUT);
   shift.begin(PL, CE, DATA, CLK_CP);
   timeUtil.configureSetup();
-  timeUtil.setDayAlarm(16, 46);
-  timeUtil.setNightAlarm(22, 27);
+  timeUtil.setDayAlarm(11, 11);
 }
 
 void displayValues()
