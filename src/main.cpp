@@ -8,10 +8,14 @@
 #include <LiquidCrystal_I2C.h>
 
 int buzzer = 12;
-int PL = 18;
-int CLK_CP = 17;
-int CE = 19;
-int DATA = 16;
+int PL = 2;
+// CE pin 15
+int CE = 18;
+// Q7 pin 7
+int DATA = 5;
+// CP pin 2
+int CLK_CP = 4;
+int cursorRow = 0;
 const int numOfRegisters = 2;
 const int numBits = numOfRegisters * 8;
 String day_of_the_week[7] = {"Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"};
@@ -33,6 +37,8 @@ void turnOnOrOffLCD(int time_of_day, int day, int turn_on)
     lcd.print("Pills successfully taken!");
     delay(2000);
     lcd.clear();
+    lcd.print("Please close the compartment.");
+    delay(2000);
     return;
   }
 
@@ -65,21 +71,26 @@ std::vector<int> getCurrentStates()
   {
 
     int bitVal = shift.state(i) ? 1 : 0; // read single bit
+    Serial.print(bitVal);
     if (bitVal == 1)
     {
       states.push_back(i);
     }
   }
+  Serial.println();
   return states;
 }
 
 void setup()
 {
-  Serial.begin(115200);
+  Serial.begin(9600);
   pinMode(buzzer, OUTPUT);
   shift.begin(PL, CE, DATA, CLK_CP);
   timeUtil.configureSetup();
-  timeUtil.setDayAlarm(17, 38);
+  timeUtil.setDayAlarm(21, 33);
+  timeUtil.setNoonAlarm(19, 15);
+  timeUtil.setNightAlarm(23, 42);
+
   lcd.init();
   lcd.backlight();
 }
@@ -99,15 +110,23 @@ void checkIfCorrectCompartmentOpened()
   int currentTimeOfDay = timeInfo[1];
 
   int expectedCompartment = currentDay * 3 + currentTimeOfDay;
-  for (int x : currentStates)
-  {
-    Serial.print(x);
-  }
-  Serial.println();
-  Serial.println("Currently opened : " + String(currentStates[expectedCompartment]));
-  if (currentStates[expectedCompartment] == 1)
+
+  if (currentStates[0] == -1)
+    return;
+
+  if (currentStates[0] == expectedCompartment)
   {
     turnOnOrOffLCD(currentTimeOfDay, currentDay, 0); // turn off with success message
+  }
+  else if (currentStates.size() > 1)
+  {
+    turnOnOrOffLCD(currentTimeOfDay, currentDay, -1);
+    lcd.print("Please close all compartments ");
+  }
+  else
+  {
+    turnOnOrOffLCD(currentTimeOfDay, currentDay, -1);
+    lcd.print("Wrong compartment opened!");
   }
 }
 
@@ -115,6 +134,7 @@ void loop()
 {
   if (shift.update())
   {
+    Serial.println("Shift register updated:");
     getCurrentStates();
     checkIfCorrectCompartmentOpened();
   }
