@@ -17,5 +17,6 @@ public:
     void setNightAlarm(int hour, int minute);
     void configureSetup();
     void refresh();
+    std::vector<int> getCurrentTimeInfo();
 };
 #endif

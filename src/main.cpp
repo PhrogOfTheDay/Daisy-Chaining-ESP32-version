@@ -5,40 +5,49 @@
 #include "ShiftIn.h"
 #include "time_util.h"
 #include <TimeAlarms.h>
+#include <LiquidCrystal_I2C.h>
 
-int const LED_PIN = 15;
-int const LED_COUNT = 21;
-int const buzzer = 4;
-Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
-
+int buzzer = 12;
 int PL = 18;
 int CLK_CP = 17;
 int CE = 19;
 int DATA = 16;
 const int numOfRegisters = 2;
 const int numBits = numOfRegisters * 8;
+String day_of_the_week[7] = {"Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"};
+String times_of_the_day[3] = {"Morning", "Afternoon", "Evening"};
 
-Neza74HC165<numOfRegisters> shiftRegs;
 ShiftIn<numOfRegisters> shift;
+LiquidCrystal_I2C lcd(0x27, 16, 4); // I2C address 0x27, 16 column and 4 rows
 
-void turnOnOrOffLED(int led_no, bool on = true)
+void turnOnOrOffLCD(int time_of_day, int day, int turn_on)
 {
-  strip.clear();
-  if (on)
+  if (turn_on == -1)
   {
-    strip.setPixelColor(led_no, 255, 0, 0);
+    lcd.clear();
+    return;
   }
-  else
+  else if (turn_on == 0)
   {
-    strip.setPixelColor(led_no, 0, 0, 0);
+    lcd.clear();
+    lcd.print("Pills successfully taken!");
+    delay(2000);
+    lcd.clear();
+    return;
   }
-  strip.show();
-  delay(4000);
+
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("------REMINDER------");
+  lcd.setCursor(0, 1);
+  lcd.print("Day: " + day_of_the_week[day]);
+  lcd.setCursor(0, 2);
+  lcd.print("Time: " + times_of_the_day[time_of_day]);
 }
 
 void activateReminder(int time_of_day, int day)
 {
-  turnOnOrOffLED(day * 3 + time_of_day);
+  turnOnOrOffLCD(time_of_day, day, true);
   tone(buzzer, 31);
   delay(2000);
   Serial.println(day * 3 + time_of_day);
@@ -50,12 +59,7 @@ TimeUtil timeUtil(activateReminder);
 
 std::vector<int> getCurrentStates()
 {
-  String day_of_the_week[7] = {"Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"};
-  String times_of_the_day[3] = {"Morning", "Afternoon", "Evening"};
-
   std::vector<int> states;
-
-  shiftRegs.update();
 
   for (int i = 0; i < 8 * numOfRegisters; i++)
   {
@@ -64,13 +68,8 @@ std::vector<int> getCurrentStates()
     if (bitVal == 1)
     {
       states.push_back(i);
-      turnOnOrOffLED(i, false);
-      Serial.println("Day: " + day_of_the_week[i / 3]);
-      Serial.println("Time: " + times_of_the_day[i % 3]);
     }
   }
-  Serial.println();
-
   return states;
 }
 
@@ -80,7 +79,9 @@ void setup()
   pinMode(buzzer, OUTPUT);
   shift.begin(PL, CE, DATA, CLK_CP);
   timeUtil.configureSetup();
-  timeUtil.setDayAlarm(11, 11);
+  timeUtil.setDayAlarm(17, 38);
+  lcd.init();
+  lcd.backlight();
 }
 
 void displayValues()
@@ -90,10 +91,33 @@ void displayValues()
   Serial.println();
 }
 
+void checkIfCorrectCompartmentOpened()
+{
+  std::vector<int> currentStates = getCurrentStates();
+  std::vector<int> timeInfo = timeUtil.getCurrentTimeInfo();
+  int currentDay = timeInfo[0];
+  int currentTimeOfDay = timeInfo[1];
+
+  int expectedCompartment = currentDay * 3 + currentTimeOfDay;
+  for (int x : currentStates)
+  {
+    Serial.print(x);
+  }
+  Serial.println();
+  Serial.println("Currently opened : " + String(currentStates[expectedCompartment]));
+  if (currentStates[expectedCompartment] == 1)
+  {
+    turnOnOrOffLCD(currentTimeOfDay, currentDay, 0); // turn off with success message
+  }
+}
+
 void loop()
 {
-  if (shift.update()) // read in all values. returns true if any button has changed
+  if (shift.update())
+  {
     getCurrentStates();
+    checkIfCorrectCompartmentOpened();
+  }
   timeUtil.refresh();
   delay(10);
 }
