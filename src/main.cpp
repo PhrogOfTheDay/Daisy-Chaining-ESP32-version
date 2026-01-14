@@ -1,3 +1,7 @@
+#define BLYNK_TEMPLATE_ID "TMPL6wztc6zoe"
+#define BLYNK_TEMPLATE_NAME "My Template "
+#define BLYNK_AUTH_TOKEN "4yNUa-WC4_9O9m41CLEWgttozOh2Srp7"
+
 #include <Neza74HC165.h>
 #include <Adafruit_NeoPixel.h>
 #include <vector>
@@ -6,6 +10,13 @@
 #include "time_util.h"
 #include <TimeAlarms.h>
 #include <LiquidCrystal_I2C.h>
+#include <BlynkSimpleEsp32.h>
+#include <WiFi.h>
+#include <Preferences.h>
+
+char network_ssid[] = "Ravindu's Galaxy S10+";
+char pass[] = "eolc6468";
+char auth[] = "4yNUa-WC4_9O9m41CLEWgttozOh2Srp7";
 
 int buzzer = 12;
 int PL = 2;
@@ -23,6 +34,7 @@ String times_of_the_day[3] = {"Morning", "Afternoon", "Evening"};
 
 ShiftIn<numOfRegisters> shift;
 LiquidCrystal_I2C lcd(0x27, 16, 4); // I2C address 0x27, 16 column and 4 rows
+Preferences prefs;
 
 void turnOnOrOffLCD(int time_of_day, int day, int turn_on)
 {
@@ -44,7 +56,7 @@ void turnOnOrOffLCD(int time_of_day, int day, int turn_on)
 
   lcd.clear();
   lcd.setCursor(0, 0);
-  lcd.print("------REMINDER------");
+  lcd.print("----REMINDER----");
   lcd.setCursor(0, 1);
   lcd.print("Day: " + day_of_the_week[day]);
   lcd.setCursor(0, 2);
@@ -81,15 +93,110 @@ std::vector<int> getCurrentStates()
   return states;
 }
 
+int readFromMemory(String variable_name)
+{
+  prefs.begin("timeData", true);
+  int value = prefs.getInt(variable_name.c_str(), -1);
+  prefs.end();
+  return value;
+}
+
+void initializeMemory()
+{
+  prefs.begin("timeData", true);
+  if (readFromMemory("morningTimeHr") == -1)
+  {
+    prefs.putInt("morningTimeHr", 9);
+  }
+  if (readFromMemory("morningTimeMin") == -1)
+  {
+    prefs.putInt("morningTimeMin", 0);
+  }
+  if (readFromMemory("noonTimeHr") == -1)
+  {
+    prefs.putInt("noonTimeHr", 13);
+  }
+  if (readFromMemory("noonTimeMin") == -1)
+  {
+    prefs.putInt("noonTimeMin", 0);
+  }
+  if (readFromMemory("eveningTimeHr") == -1)
+  {
+    prefs.putInt("eveningTimeHr", 21);
+  }
+  if (readFromMemory("eveningTimeMin") == -1)
+  {
+    prefs.putInt("eveningTimeMin", 0);
+  }
+}
+
+void writeToMemory(String variable_name, int value)
+{
+  prefs.begin("timeData", false);
+  prefs.putInt(variable_name.c_str(), value);
+  prefs.end();
+}
+
+BLYNK_WRITE(V0) // read the morning time input
+{
+  String date = param.asString();
+  TimeInputParam time(param);
+
+  int h = time.getStartHour();
+  int m = time.getStartMinute();
+
+  timeUtil.setDayAlarm(h, m);
+
+  writeToMemory("morningTimeHr", h);
+  writeToMemory("morningTimeMin", m);
+  Serial.println("Morning time set to " + String(h) + ":" + String(m));
+}
+
+BLYNK_WRITE(V1) // read the afternoon time input
+{
+  String date = param.asString();
+  TimeInputParam time(param);
+
+  int h = time.getStartHour();
+  int m = time.getStartMinute();
+  timeUtil.setNoonAlarm(h, m);
+  writeToMemory("noonTimeHr", h);
+  writeToMemory("noonTimeMin", m);
+  Serial.println("Afternoon time set to " + String(h) + ":" + String(m));
+  Serial.println("Afternoon time HR from memory: " + String(readFromMemory("noonTimeHr")));
+}
+
+BLYNK_WRITE(V2) // read the evening time input
+{
+  String date = param.asString();
+  TimeInputParam time(param);
+
+  int h = time.getStartHour();
+  int m = time.getStartMinute();
+
+  timeUtil.setNightAlarm(h, m);
+
+  writeToMemory("eveningTimeHr", h);
+  writeToMemory("eveningTimeMin", m);
+  Serial.println("Evening time set to " + String(h) + ":" + String(m));
+  Serial.println("Evening time HR from memory: " + String(readFromMemory("eveningTimeHr")));
+}
+
 void setup()
 {
   Serial.begin(9600);
+
+  Blynk.begin(auth, network_ssid, pass, "blynk.cloud", 80);
+
   pinMode(buzzer, OUTPUT);
   shift.begin(PL, CE, DATA, CLK_CP);
-  timeUtil.configureSetup();
-  timeUtil.setDayAlarm(21, 33);
-  timeUtil.setNoonAlarm(19, 15);
-  timeUtil.setNightAlarm(23, 42);
+  timeUtil.configureSetup(); // just synchronize everything
+
+  initializeMemory();
+
+  timeUtil.setDayAlarm(readFromMemory("morningTimeHr"), readFromMemory("morningTimeMin"));
+  timeUtil.setNoonAlarm(readFromMemory("noonTimeHr"), readFromMemory("noonTimeMin"));
+  timeUtil.setNightAlarm(readFromMemory("eveningTimeHr"), readFromMemory("eveningTimeMin"));
 
   lcd.init();
   lcd.backlight();
@@ -132,6 +239,7 @@ void checkIfCorrectCompartmentOpened()
 
 void loop()
 {
+  Blynk.run();
   if (shift.update())
   {
     Serial.println("Shift register updated:");
@@ -139,5 +247,5 @@ void loop()
     checkIfCorrectCompartmentOpened();
   }
   timeUtil.refresh();
-  delay(10);
+  delay(500);
 }
