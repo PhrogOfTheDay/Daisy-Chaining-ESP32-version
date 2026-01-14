@@ -14,19 +14,18 @@
 #include <WiFi.h>
 #include <Preferences.h>
 
+// credentials for Blynk
 char network_ssid[] = "Ravindu's Galaxy S10+";
 char pass[] = "eolc6468";
 char auth[] = "4yNUa-WC4_9O9m41CLEWgttozOh2Srp7";
 
 int buzzer = 12;
 int PL = 2;
-// CE pin 15
 int CE = 18;
-// Q7 pin 7
 int DATA = 5;
-// CP pin 2
 int CLK_CP = 4;
 int cursorRow = 0;
+
 const int numOfRegisters = 2;
 const int numBits = numOfRegisters * 8;
 String day_of_the_week[7] = {"Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"};
@@ -35,6 +34,8 @@ String times_of_the_day[3] = {"Morning", "Afternoon", "Evening"};
 ShiftIn<numOfRegisters> shift;
 LiquidCrystal_I2C lcd(0x27, 16, 4); // I2C address 0x27, 16 column and 4 rows
 Preferences prefs;
+
+bool timeToTakeMedicine = false;
 
 void turnOnOrOffLCD(int time_of_day, int day, int turn_on)
 {
@@ -65,6 +66,7 @@ void turnOnOrOffLCD(int time_of_day, int day, int turn_on)
 
 void activateReminder(int time_of_day, int day)
 {
+  timeToTakeMedicine = true;
   turnOnOrOffLCD(time_of_day, day, true);
   tone(buzzer, 31);
   delay(2000);
@@ -87,6 +89,7 @@ std::vector<int> getCurrentStates()
     if (bitVal == 1)
     {
       states.push_back(i);
+      Serial.println(" -- Compartment " + String(i) + " opened.");
     }
   }
   Serial.println();
@@ -211,12 +214,33 @@ void displayValues()
 
 void checkIfCorrectCompartmentOpened()
 {
+  if (!timeToTakeMedicine)
+  {
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("Kindly close the ");
+    lcd.setCursor(0, 1);
+    lcd.print("compartments");
+    lcd.setCursor(0, 2);
+    lcd.print("Its not time");
+    lcd.setCursor(0, 3);
+    lcd.print("to take medicine");
+    delay(2000);
+    lcd.clear();
+    return;
+  }
+
   std::vector<int> currentStates = getCurrentStates();
   std::vector<int> timeInfo = timeUtil.getCurrentTimeInfo();
   int currentDay = timeInfo[0];
   int currentTimeOfDay = timeInfo[1];
 
   int expectedCompartment = currentDay * 3 + currentTimeOfDay;
+  Serial.println("Expected compartment to be opened: " + String(expectedCompartment));
+  if (currentStates.empty())
+  {
+    return;
+  }
 
   if (currentStates[0] == -1)
     return;
@@ -224,6 +248,7 @@ void checkIfCorrectCompartmentOpened()
   if (currentStates[0] == expectedCompartment)
   {
     turnOnOrOffLCD(currentTimeOfDay, currentDay, 0); // turn off with success message
+    timeToTakeMedicine = false;
   }
   else if (currentStates.size() > 1)
   {
