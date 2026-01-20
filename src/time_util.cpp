@@ -6,12 +6,12 @@
 #include <Arduino.h>
 #include <vector>
 #include "time_util.h"
-/*
+
 const char *ssid = "Leo_EXT";
 const char *password = "Asitha123@@@@";
-*/
-const char *ssid = "Wokwi-GUEST";
-const char *password = "";
+
+/*const char *ssid = "Wokwi-GUEST";
+const char *password = "";*/
 const char *time_zone = "IST-5:30";
 int currentDay;
 int currentTimeOfDay;
