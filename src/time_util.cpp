@@ -7,8 +7,11 @@
 #include <vector>
 #include "time_util.h"
 
-const char *ssid = "Leo_EXT";
-const char *password = "Asitha123@@@@";
+char ssid[] = "Ravindu's Galaxy S10+";
+char password[] = "eolc6468";
+
+/*char ssid[] = "Leo_EXT";
+char password[] = "Asitha123@@@@";*/
 
 /*const char *ssid = "Wokwi-GUEST";
 const char *password = "";*/
@@ -37,9 +40,9 @@ void TimeUtil::connectToWiFi()
 
 void setCurrentDay()
 {
-    struct tm timeInfo;
+    struct tm timeInfo; // represents time in a convinient structured format
     // getLocalTime returns true if all data/time info was successfully loaded into timeInfo
-    if (getLocalTime(&timeInfo))
+    if (getLocalTime(&timeInfo)) // loads current time into timeInfo structure
     {
         int todaysDay = timeInfo.tm_wday == 0 ? 6 : timeInfo.tm_wday - 1;
         currentDay = todaysDay; // gets day of the week between 0-6 for each since sunday
@@ -49,6 +52,12 @@ void setCurrentDay()
 void TimeUtil::synchronizeTime()
 {
     configTzTime(time_zone, "pool.ntp.org", "time.nist.gov");
+    /*
+    1.connects to the NTP servers
+    2.sets the esp32 system clock based on the recieved value
+    3.allows the system clock to run independently after that
+    4.getLocalTime will work based on the last synced timestamp and elapsed time
+    */
 
     struct tm timeinfo;
     Serial.println("Waiting for NTP time sync...");
@@ -137,7 +146,7 @@ std::vector<int> TimeUtil::getCurrentTimeInfo()
 
     Serial.println("Current time" + currentTimeOfDay);
     Serial.println("Current day" + currentDay);
-    return {currentDay, currentTimeOfDay};
+    return {3, currentTimeOfDay};
 }
 
 void TimeUtil::refresh()

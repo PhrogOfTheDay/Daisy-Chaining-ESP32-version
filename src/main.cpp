@@ -2,8 +2,9 @@
 #define BLYNK_TEMPLATE_NAME "My Template "
 #define BLYNK_AUTH_TOKEN "4yNUa-WC4_9O9m41CLEWgttozOh2Srp7"
 
+#include <ThingSpeak.h>
 #include <Neza74HC165.h>
-#include <Adafruit_NeoPixel.h>
+#include <arduino-timer.h>
 #include <vector>
 #include <Arduino.h>
 #include "ShiftIn.h"
@@ -14,9 +15,15 @@
 #include <WiFi.h>
 #include <Preferences.h>
 
+auto timer = timer_create_default();
 // credentials for Blynk
-char network_ssid[] = "Leo_EXT";
-char pass[] = "Asitha123@@@@";
+char network_ssid[] = "Ravindu's Galaxy S10+";
+char pass[] = "eolc6468";
+
+/*char network_ssid[] = "Leo_EXT";
+char pass[] = "Asitha123@@@@";*/
+
+unsigned int elapsedTime = 0;
 
 /*char network_ssid[] = "Wokwi-GUEST";
 char pass[] = "";*/
@@ -29,6 +36,8 @@ int CE = 18;
 int DATA = 5;
 int CLK_CP = 4;
 int cursorRow = 0;
+unsigned long channelID = 3238654;
+const char *writeApiKey = "33J6DDCI5BIA8DGZ";
 
 const int numOfRegisters = 2;
 const int numBits = numOfRegisters * 8;
@@ -39,6 +48,7 @@ ShiftIn<numOfRegisters> shift;
 LiquidCrystal_I2C lcd(0x27, 16, 4); // I2C address 0x27, 16 column and 4 rows
 Preferences prefs;
 
+WiFiClient client;
 bool timeToTakeMedicine = false;
 
 void turnOnOrOffLCD(int time_of_day, int day, int turn_on)
@@ -50,15 +60,33 @@ void turnOnOrOffLCD(int time_of_day, int day, int turn_on)
   }
   else if (turn_on == 0)
   {
+    double currElapsedTime = (millis() - elapsedTime);
     digitalWrite(buzzer, LOW);
-    lcd.clear();
-    lcd.print("Pills successfully taken!");
-    delay(2000);
-    lcd.clear();
-    lcd.print("Please close the compartment.");
-    delay(2000);
-    Blynk.logEvent("pills_taken", "User successfully took their " + times_of_the_day[time_of_day] + " medicine for " + day_of_the_week[day] + ".");
 
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("Pills successfully taken!");
+    lcd.setCursor(0, 1);
+    lcd.print("Please close the compartment.");
+
+    timer.in(4000, [](void *)
+             {
+               lcd.clear();  // clears the display in 4 seconds
+               return false; // returning false makes it only run once
+             });
+    long seconds = currElapsedTime / 1000;
+    long minutes = seconds / 60;
+
+    float minutes_in_dec = (currElapsedTime / 60000.0);
+    ThingSpeak.setField(time_of_day + 1, minutes_in_dec);
+    ThingSpeak.writeFields(channelID, writeApiKey);
+
+    long hours = minutes / 60;
+    seconds %= 60;
+    minutes %= 60;
+    hours %= 24;
+
+    Blynk.logEvent("pills_taken", "User successfully took their " + times_of_the_day[time_of_day] + " medicine for " + day_of_the_week[day] + ", with a delay of " + seconds + " seconds, " + minutes + " minutes and " + hours + " hours.");
     return;
   }
 
@@ -82,6 +110,7 @@ void activateReminder(int time_of_day, int day)
   Serial.println(day * 3 + time_of_day);
   Serial.println("Day: " + String(day) + ", Time of Day: " + String(time_of_day));
   noTone(buzzer);
+  elapsedTime = millis(); // get the current time in milliseconds
 }
 
 TimeUtil timeUtil(activateReminder);
@@ -113,7 +142,7 @@ int readFromMemory(String variable_name)
   return value;
 }
 
-void initializeMemory()
+void initializeMemory() // check if memory has actual data in it. If set default values
 {
   prefs.begin("timeData", true);
   if (readFromMemory("morningTimeHr") == -1)
@@ -158,7 +187,7 @@ BLYNK_WRITE(V0) // read the morning time input
   int m = time.getStartMinute();
 
   timeUtil.setDayAlarm(h, m);
-  writeToMemory("morningTimeHr", h);
+  writeToMemory("morningTimeHr", h); // store latest set value in memory
   writeToMemory("morningTimeMin", m);
   Serial.println("Morning time set to " + String(h) + ":" + String(m));
 }
@@ -171,7 +200,7 @@ BLYNK_WRITE(V1) // read the afternoon time input
   int h = time.getStartHour();
   int m = time.getStartMinute();
   timeUtil.setNoonAlarm(h, m);
-  writeToMemory("noonTimeHr", h);
+  writeToMemory("noonTimeHr", h); // store latest set value in memory
   writeToMemory("noonTimeMin", m);
   Serial.println("Afternoon time set to " + String(h) + ":" + String(m));
   Serial.println("Afternoon time HR from memory: " + String(readFromMemory("noonTimeHr")));
@@ -187,10 +216,27 @@ BLYNK_WRITE(V2) // read the evening time input
 
   timeUtil.setNightAlarm(h, m);
 
-  writeToMemory("eveningTimeHr", h);
+  writeToMemory("eveningTimeHr", h); // store latest set value in memory
   writeToMemory("eveningTimeMin", m);
   Serial.println("Evening time set to " + String(h) + ":" + String(m));
   Serial.println("Evening time HR from memory: " + String(readFromMemory("eveningTimeHr")));
+}
+
+bool isBlynkReachable()
+{
+  if (Blynk.connected())
+  {
+    lcd.setCursor(0, 0);
+    lcd.print("User app is connected to Blynk server.");
+    timer.in(1000, [](void *)
+             {
+               lcd.clear();  // clears the display in a second
+               return false; // returning false makes it only run once
+             });
+    Serial.println("Blynk server is reachable.");
+    return true;
+  }
+  return false;
 }
 
 void setup()
@@ -212,21 +258,17 @@ void setup()
   Serial.println("Time synchronized.");
   initializeMemory();
 
-  timeUtil.setDayAlarm(readFromMemory("morningTimeHr"), readFromMemory("morningTimeMin"));
-  timeUtil.setNoonAlarm(readFromMemory("noonTimeHr"), readFromMemory("noonTimeMin"));
-  timeUtil.setNightAlarm(readFromMemory("eveningTimeHr"), readFromMemory("eveningTimeMin"));
   Serial.println("Memory initialized.");
   lcd.init();
   lcd.backlight();
-
-  Blynk.logEvent("pills_taken", "The smart pill dispenser has been started.");
-}
-
-void displayValues()
-{
-  for (int i = 0; i < shift.getDataWidth(); i++)
-    Serial.print(shift.state(i));
-  Serial.println();
+  if (!isBlynkReachable())
+  {
+    timeUtil.setDayAlarm(readFromMemory("morningTimeHr"), readFromMemory("morningTimeMin"));
+    timeUtil.setNoonAlarm(readFromMemory("noonTimeHr"), readFromMemory("noonTimeMin"));
+    timeUtil.setNightAlarm(readFromMemory("eveningTimeHr"), readFromMemory("eveningTimeMin"));
+    Serial.println("Alarms set from memory.");
+  }
+  ThingSpeak.begin(client);
 }
 
 void checkIfCorrectCompartmentOpened()
@@ -242,7 +284,11 @@ void checkIfCorrectCompartmentOpened()
   if (counter == 0)
   {
     Serial.println("No compartments opened.");
-    digitalWrite(buzzer, LOW);
+    if (!timeToTakeMedicine)
+    {
+      digitalWrite(buzzer, LOW);
+    }
+
     return;
   }
 
@@ -288,16 +334,31 @@ void checkIfCorrectCompartmentOpened()
   {
     turnOnOrOffLCD(currentTimeOfDay, currentDay, -1);
     lcd.print("Please close all compartments ");
+    delay(2000);
   }
   else
   {
     turnOnOrOffLCD(currentTimeOfDay, currentDay, -1);
     lcd.print("Wrong compartment opened!");
+    delay(2000);
+  }
+  if (timeToTakeMedicine)
+  {
+    timeToTakeMedicine = true;
+    digitalWrite(buzzer, HIGH);
+    Serial.println("Day: " + String(currentDay) + ", Time of Day: " + String(currentTimeOfDay));
+    turnOnOrOffLCD(currentTimeOfDay, currentDay, true);
+    tone(buzzer, 31);
+    delay(2000);
+    Serial.println(currentDay * 3 + currentTimeOfDay);
+    Serial.println("Day: " + String(currentDay) + ", Time of Day: " + String(currentTimeOfDay));
+    noTone(buzzer);
   }
 }
 
 void loop()
 {
+
   Blynk.run();
   if (shift.update())
   {
@@ -305,15 +366,5 @@ void loop()
     checkIfCorrectCompartmentOpened();
   }
   timeUtil.refresh();
-  delay(100);
-  for (int i = 0; i < 8 * numOfRegisters; i++)
-  {
-
-    int bitVal = shift.state(i) ? 1 : 0; // read single bit
-    // read 0 when pressed down (default state), reads 1 when opened
-    Serial.print(bitVal);
-  }
-  Serial.println();
-
-  delay(1000);
+  timer.tick();
 }
