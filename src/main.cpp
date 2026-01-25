@@ -10,10 +10,11 @@
 #include "ShiftIn.h"
 #include "time_util.h"
 #include <TimeAlarms.h>
-#include <LiquidCrystal_I2C.h>
+#include <LCDI2C_Multilingual.h>
 #include <BlynkSimpleEsp32.h>
 #include <WiFi.h>
 #include <Preferences.h>
+#include <I2C_LCD.h>
 
 auto timer = timer_create_default();
 // credentials for Blynk
@@ -42,10 +43,10 @@ const char *writeApiKey = "33J6DDCI5BIA8DGZ";
 const int numOfRegisters = 2;
 const int numBits = numOfRegisters * 8;
 String day_of_the_week[7] = {"Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"};
-String times_of_the_day[3] = {"Morning", "Afternoon", "Evening"};
+String times_of_the_day[3] = {"Morning", "Noon", "Evening"};
 
 ShiftIn<numOfRegisters> shift;
-LiquidCrystal_I2C lcd(0x27, 16, 4); // I2C address 0x27, 16 column and 4 rows
+I2C_LCD lcd(0x27); // I2C address 0x27, 16 column and 4 rows
 Preferences prefs;
 
 WiFiClient client;
@@ -65,9 +66,7 @@ void turnOnOrOffLCD(int time_of_day, int day, int turn_on)
 
     lcd.clear();
     lcd.setCursor(0, 0);
-    lcd.print("Pills successfully taken!");
-    lcd.setCursor(0, 1);
-    lcd.print("Please close the compartment.");
+    lcd.print("Pills taken! \nPlease close\nthe compartment(s)");
 
     timer.in(4000, [](void *)
              {
@@ -92,15 +91,17 @@ void turnOnOrOffLCD(int time_of_day, int day, int turn_on)
 
   lcd.clear();
   lcd.setCursor(0, 0);
-  lcd.print("----REMINDER----");
-  lcd.setCursor(0, 1);
-  lcd.print("Day: " + day_of_the_week[day]);
-  lcd.setCursor(0, 2);
-  lcd.print("Time: " + times_of_the_day[time_of_day]);
+  lcd.print("----REMINDER----\nDay: " + day_of_the_week[3] + "\nTime: " + times_of_the_day[time_of_day]);
 }
 
 void activateReminder(int time_of_day, int day)
 {
+  Serial.println((String)timeToTakeMedicine);
+  Serial.println("Hello");
+  if (timeToTakeMedicine)
+  {
+    Blynk.logEvent("missed_dose", "User missed taking their " + times_of_the_day[time_of_day] + " medicine for " + day_of_the_week[day] + ".");
+  }
   timeToTakeMedicine = true;
   digitalWrite(buzzer, HIGH);
   Serial.println("Day: " + String(day) + ", Time of Day: " + String(time_of_day));
@@ -192,7 +193,7 @@ BLYNK_WRITE(V0) // read the morning time input
   Serial.println("Morning time set to " + String(h) + ":" + String(m));
 }
 
-BLYNK_WRITE(V1) // read the afternoon time input
+BLYNK_WRITE(V1) // read the Noon time input
 {
   String date = param.asString();
   TimeInputParam time(param);
@@ -202,8 +203,8 @@ BLYNK_WRITE(V1) // read the afternoon time input
   timeUtil.setNoonAlarm(h, m);
   writeToMemory("noonTimeHr", h); // store latest set value in memory
   writeToMemory("noonTimeMin", m);
-  Serial.println("Afternoon time set to " + String(h) + ":" + String(m));
-  Serial.println("Afternoon time HR from memory: " + String(readFromMemory("noonTimeHr")));
+  Serial.println("Noon time set to " + String(h) + ":" + String(m));
+  Serial.println("Noon time HR from memory: " + String(readFromMemory("noonTimeHr")));
 }
 
 BLYNK_WRITE(V2) // read the evening time input
@@ -257,9 +258,9 @@ void setup()
   timeUtil.configureSetup(); // just synchronize everything
   Serial.println("Time synchronized.");
   initializeMemory();
-
   Serial.println("Memory initialized.");
-  lcd.init();
+  Wire.begin();
+  lcd.begin(16, 4);
   lcd.backlight();
   if (!isBlynkReachable())
   {
